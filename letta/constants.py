@@ -247,7 +247,7 @@ CORE_MEMORY_LINE_NUMBER_WARNING = "# NOTE: Line numbers shown below (with arrows
 # Constants to do with summarization / conversation length window
 # The max amount of tokens supported by the underlying model (eg 8k for gpt-4 and Mistral 7B)
 LLM_MAX_CONTEXT_WINDOW = {
-    "DEFAULT": 30000,
+    "DEFAULT": 220000,
     # deepseek
     "deepseek-chat": 64000,
     "deepseek-reasoner": 64000,
@@ -444,7 +444,7 @@ REQ_HEARTBEAT_MESSAGE = f"{NON_USER_MSG_PREFIX}Function called using request_hea
 FUNC_FAILED_HEARTBEAT_MESSAGE = f"{NON_USER_MSG_PREFIX}Function call failed, returning control"
 
 
-RETRIEVAL_QUERY_DEFAULT_PAGE_SIZE = 5
+RETRIEVAL_QUERY_DEFAULT_PAGE_SIZE = 25
 
 MAX_FILENAME_LENGTH = 255
 RESERVED_FILENAMES = {"CON", "PRN", "AUX", "NUL", "COM1", "COM2", "LPT1", "LPT2"}
