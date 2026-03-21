@@ -371,7 +371,7 @@ def serialize_message_content(message_content: Optional[List[Union[MessageConten
     for content in message_content:
         if isinstance(content, MessageContent):
             if content.type == MessageContentType.image:
-                assert content.source.type == ImageSourceType.letta, f"Invalid image source type: {content.source.type}"
+                assert content.source.type in (ImageSourceType.letta, ImageSourceType.base64), f"Invalid image source type: {content.source.type}"
             # Sanitize null bytes from message content to prevent PostgreSQL errors
             serialized_message_content.append(sanitize_null_bytes(content.model_dump(mode="json")))
         elif isinstance(content, dict):
@@ -396,7 +396,7 @@ def deserialize_message_content(data: Optional[List[Dict]]) -> List[MessageConte
         if content_type == MessageContentType.text:
             content = TextContent(**item)
         elif content_type == MessageContentType.image:
-            assert item["source"]["type"] == ImageSourceType.letta, f"Invalid image source type: {item['source']['type']}"
+            assert item["source"]["type"] in (ImageSourceType.letta, ImageSourceType.base64), f"Invalid image source type: {item['source']['type']}"
             content = ImageContent(**item)
         elif content_type == MessageContentType.tool_call:
             content = ToolCallContent(**item)
