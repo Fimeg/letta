@@ -1442,11 +1442,12 @@ class Message(BaseMessage):
                 tool_return = self.tool_returns[0]
                 if not tool_return.tool_call_id:
                     raise TypeError("OpenAI API requires tool_call_id to be set.")
-                # Convert to text first (replaces images with placeholders), then truncate
+                # Tool message content must be a string per OpenAI Chat Completions spec.
+                # Images are handled in to_openai_dicts_from_list via injected user messages.
                 func_response_text = tool_return_to_text(tool_return.func_response)
-                func_response = truncate_tool_return(func_response_text, tool_return_truncation_chars)
+                openai_content = truncate_tool_return(func_response_text, tool_return_truncation_chars)
                 openai_message = {
-                    "content": func_response,
+                    "content": openai_content,
                     "role": self.role,
                     "tool_call_id": tool_return.tool_call_id[:max_tool_id_length] if max_tool_id_length else tool_return.tool_call_id,
                 }
@@ -1499,16 +1500,52 @@ class Message(BaseMessage):
                 for tr in m.tool_returns:
                     if not tr.tool_call_id:
                         raise TypeError("ToolReturn came back without a tool_call_id.")
-                    # Convert multi-modal to text (images → placeholders), then truncate
-                    func_response_text = tool_return_to_text(tr.func_response)
-                    func_response = truncate_tool_return(func_response_text, tool_return_truncation_chars)
+                    # OpenAI Chat Completions: tool message content must be a string.
+                    # Images can only go in user messages, so split: text in tool return,
+                    # image in a follow-up user message.
+                    func_response = tr.func_response
+                    image_parts = []
+                    if isinstance(func_response, list) and any(
+                        isinstance(p, ImageContent) or (isinstance(p, dict) and p.get("type") == "image")
+                        for p in func_response
+                    ):
+                        # Extract text for the tool return, collect images for user message
+                        text_pieces = []
+                        for part in func_response:
+                            if isinstance(part, TextContent):
+                                text_pieces.append(part.text)
+                            elif isinstance(part, ImageContent):
+                                image_url = Message._image_source_to_data_url(part)
+                                if image_url:
+                                    image_parts.append({"type": "image_url", "image_url": {"url": image_url}})
+                            elif isinstance(part, dict):
+                                if part.get("type") == "text":
+                                    text_pieces.append(part.get("text", ""))
+                                elif part.get("type") == "image":
+                                    image_url = Message._image_dict_to_data_url(part)
+                                    if image_url:
+                                        image_parts.append({"type": "image_url", "image_url": {"url": image_url}})
+                            else:
+                                text_pieces.append(str(part))
+                        openai_content = truncate_tool_return("\n".join(text_pieces), tool_return_truncation_chars)
+                    else:
+                        func_response_text = tool_return_to_text(func_response)
+                        openai_content = truncate_tool_return(func_response_text, tool_return_truncation_chars)
                     result.append(
                         {
-                            "content": func_response,
+                            "content": openai_content,
                             "role": "tool",
                             "tool_call_id": tr.tool_call_id[:max_tool_id_length] if max_tool_id_length else tr.tool_call_id,
                         }
                     )
+                    # Inject image as a user message right after the tool return
+                    if image_parts:
+                        result.append(
+                            {
+                                "content": [{"type": "text", "text": "[Tool returned image]"}] + image_parts,
+                                "role": "user",
+                            }
+                        )
                 continue
 
             d = m.to_openai_dict(
