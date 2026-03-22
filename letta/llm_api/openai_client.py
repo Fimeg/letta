@@ -28,7 +28,7 @@ from letta.errors import (
     LLMTimeoutError,
     LLMUnprocessableEntityError,
 )
-from letta.helpers.json_helpers import sanitize_unicode_surrogates
+from letta.helpers.json_helpers import sanitize_control_characters, sanitize_unicode_surrogates
 from letta.llm_api.error_utils import is_context_window_overflow_message, is_insufficient_credits_message
 from letta.llm_api.helpers import (
     add_inner_thoughts_to_functions,
@@ -669,6 +669,7 @@ class OpenAIClient(LLMClientBase):
         """
         # Sanitize Unicode surrogates to prevent encoding errors
         request_data = sanitize_unicode_surrogates(request_data)
+        request_data = sanitize_control_characters(request_data)
 
         client = OpenAI(**self._prepare_client_kwargs(llm_config))
         # Route based on payload shape: Responses uses 'input', Chat Completions uses 'messages'
@@ -694,6 +695,7 @@ class OpenAIClient(LLMClientBase):
         """
         # Sanitize Unicode surrogates to prevent encoding errors
         request_data = sanitize_unicode_surrogates(request_data)
+        request_data = sanitize_control_characters(request_data)
 
         kwargs = await self._prepare_client_kwargs_async(llm_config)
         client = AsyncOpenAI(**kwargs)
@@ -913,6 +915,7 @@ class OpenAIClient(LLMClientBase):
         """
         # Sanitize Unicode surrogates to prevent encoding errors
         request_data = sanitize_unicode_surrogates(request_data)
+        request_data = sanitize_control_characters(request_data)
 
         kwargs = await self._prepare_client_kwargs_async(llm_config)
         client = AsyncOpenAI(**kwargs)
@@ -947,6 +950,7 @@ class OpenAIClient(LLMClientBase):
         """
         # Sanitize Unicode surrogates to prevent encoding errors
         request_data = sanitize_unicode_surrogates(request_data)
+        request_data = sanitize_control_characters(request_data)
 
         kwargs = await self._prepare_client_kwargs_async(llm_config)
         client = AsyncOpenAI(**kwargs)

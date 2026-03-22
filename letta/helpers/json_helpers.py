@@ -51,6 +51,37 @@ def sanitize_unicode_surrogates(value: Any) -> Any:
         return value
 
 
+def sanitize_control_characters(value: Any) -> Any:
+    """Recursively remove ASCII control characters (0x00-0x1F) from strings,
+    preserving tab (0x09), newline (0x0A), and carriage return (0x0D).
+
+    Some inference backends (e.g. Fireworks AI) perform strict JSON parsing on
+    the request body and reject payloads containing unescaped control characters.
+    Python's json.dumps will escape these, but certain proxy layers may
+    double-parse or re-serialize in ways that expose the raw bytes.
+
+    This function sanitizes:
+    - Strings: strips control characters except whitespace (tab, newline, CR)
+    - Dicts: recursively sanitizes all string values
+    - Lists: recursively sanitizes all elements
+    - Other types: returned as-is
+    """
+    if isinstance(value, str):
+        return "".join(
+            char for char in value
+            if ord(char) >= 0x20  # printable
+            or char in ("\t", "\n", "\r")  # allowed whitespace
+        )
+    elif isinstance(value, dict):
+        return {sanitize_control_characters(k): sanitize_control_characters(v) for k, v in value.items()}
+    elif isinstance(value, list):
+        return [sanitize_control_characters(item) for item in value]
+    elif isinstance(value, tuple):
+        return tuple(sanitize_control_characters(item) for item in value)
+    else:
+        return value
+
+
 def sanitize_null_bytes(value: Any) -> Any:
     """Recursively remove null bytes (0x00) from strings.
 
