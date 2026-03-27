@@ -454,6 +454,15 @@ class OpenAIClient(LLMClientBase):
         )
 
         request_data = data.model_dump(exclude_unset=True, exclude_none=True)
+
+        # Strip reasoning fields (see streaming build_request_data for explanation)
+        _REASONING_FIELDS = ("reasoning_content", "reasoning_content_signature",
+                             "redacted_reasoning_content", "omitted_reasoning_content")
+        if "messages" in request_data:
+            for message in request_data["messages"]:
+                for field in _REASONING_FIELDS:
+                    message.pop(field, None)
+
         return request_data
 
     @trace_method
@@ -641,6 +650,15 @@ class OpenAIClient(LLMClientBase):
                     tool.function.strict = False
         request_data = data.model_dump(exclude_unset=True, exclude_none=True)
 
+        # Strip reasoning fields that strict backends (Fireworks/Synthetic) reject.
+        # exclude_none handles fields that are None, but reasoning_content has actual
+        # text from previous assistant turns and must be explicitly removed.
+        _REASONING_FIELDS = ("reasoning_content", "reasoning_content_signature",
+                             "redacted_reasoning_content", "omitted_reasoning_content")
+        if "messages" in request_data:
+            for message in request_data["messages"]:
+                for field in _REASONING_FIELDS:
+                    message.pop(field, None)
 
         # If Ollama
         # if llm_config.handle.startswith("ollama/") and llm_config.enable_reasoner:

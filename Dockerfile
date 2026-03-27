@@ -57,7 +57,7 @@ RUN set -eux; \
     esac; \
     apt-get update && \
     # Install curl, Python, and PostgreSQL client libraries
-    apt-get install -y curl python3 python3-venv libpq-dev redis-server && \
+    apt-get install -y curl python3 python3-venv libpq-dev redis-server git && \
     # Install Node.js
     curl -fsSL https://deb.nodesource.com/setup_${NODE_VERSION}.x | bash - && \
     apt-get install -y nodejs && \
@@ -70,6 +70,9 @@ RUN set -eux; \
     mkdir -p /etc/otel && \
     apt-get clean && \
     rm -rf /var/lib/apt/lists/*
+
+# Configure git to ignore ownership checks for mounted repos (safe.directory fix)
+RUN git config --global --add safe.directory '*' 
 
 # Add OpenTelemetry Collector configs
 COPY otel/otel-collector-config-file.yaml /etc/otel/config-file.yaml

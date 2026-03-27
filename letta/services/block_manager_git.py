@@ -109,7 +109,9 @@ class GitEnabledBlockManager(BlockManager):
             block = result.scalar_one_or_none()
 
             if block:
-                # Update existing block
+                # Update existing block only if content changed
+                if block.value == value:
+                    return block.to_pydantic()
                 block.value = value
                 if description is not None:
                     block.description = description

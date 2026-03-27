@@ -1096,7 +1096,7 @@ class LettaAgentV3(LettaAgentV2):
                 )
                 # update metrics
                 self._update_global_usage_stats(llm_adapter.usage)
-                self.context_token_estimate = llm_adapter.usage.total_tokens
+                self.context_token_estimate = llm_adapter.usage.prompt_tokens
                 self.logger.info(f"Context token estimate after LLM request: {self.context_token_estimate}")
 
                 # Extract logprobs if present (for RL training)

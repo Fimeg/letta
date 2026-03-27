@@ -51,25 +51,46 @@ def sanitize_unicode_surrogates(value: Any) -> Any:
         return value
 
 
-def sanitize_control_characters(value: Any) -> Any:
-    """Recursively remove ASCII control characters (0x00-0x1F) from strings,
-    preserving tab (0x09), newline (0x0A), and carriage return (0x0D).
+_UNICODE_TO_ASCII = {
+    "\u2014": "--",   # em-dash
+    "\u2013": "-",    # en-dash
+    "\u2012": "-",    # figure dash
+    "\u2010": "-",    # hyphen
+    "\u2011": "-",    # non-breaking hyphen
+    "\u201c": '"',    # left double quotation mark
+    "\u201d": '"',    # right double quotation mark
+    "\u2018": "'",    # left single quotation mark
+    "\u2019": "'",    # right single quotation mark
+    "\u201a": ",",    # single low-9 quotation mark
+    "\u201e": '"',    # double low-9 quotation mark
+    "\u2026": "...",  # horizontal ellipsis
+    "\u00a0": " ",    # non-breaking space
+    "\u00ad": "",     # soft hyphen (invisible, strip)
+}
 
-    Some inference backends (e.g. Fireworks AI) perform strict JSON parsing on
-    the request body and reject payloads containing unescaped control characters.
-    Python's json.dumps will escape these, but certain proxy layers may
-    double-parse or re-serialize in ways that expose the raw bytes.
+
+def sanitize_control_characters(value: Any) -> Any:
+    """Recursively sanitize strings for strict ASCII-only JSON backends (e.g. Synthetic).
+
+    Removes ASCII control characters (0x00-0x1F) except tab/newline/CR.
+    Replaces common non-ASCII typography (em-dash, curly quotes, ellipsis, etc.)
+    with ASCII equivalents. Strips remaining non-ASCII chars (> 0x7E) that would
+    appear as raw multi-byte UTF-8 sequences in the request body and cause parse
+    failures on backends that expect ASCII-safe JSON.
 
     This function sanitizes:
-    - Strings: strips control characters except whitespace (tab, newline, CR)
+    - Strings: replaces/strips non-ASCII; strips control chars except whitespace
     - Dicts: recursively sanitizes all string values
     - Lists: recursively sanitizes all elements
     - Other types: returned as-is
     """
     if isinstance(value, str):
+        # Replace known typographic Unicode with ASCII equivalents first
+        for uni, asc in _UNICODE_TO_ASCII.items():
+            value = value.replace(uni, asc)
         return "".join(
             char for char in value
-            if ord(char) >= 0x20  # printable
+            if ord(char) <= 0x7E  # printable ASCII only
             or char in ("\t", "\n", "\r")  # allowed whitespace
         )
     elif isinstance(value, dict):

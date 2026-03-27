@@ -50,6 +50,10 @@ services:
       - CLICKHOUSE_DATABASE=${CLICKHOUSE_DATABASE}
       - CLICKHOUSE_USERNAME=${CLICKHOUSE_USERNAME}
       - CLICKHOUSE_PASSWORD=${CLICKHOUSE_PASSWORD}
+      # Git safe.directory config (backup to Dockerfile fix for dubious ownership)
+      - GIT_CONFIG_COUNT=1
+      - GIT_CONFIG_KEY_0=safe.directory
+      - GIT_CONFIG_VALUE_0=*
     # volumes:
     # - ./configs/server_config.yaml:/root/.letta/config # config file
     # - ~/.letta/credentials:/root/.letta/credentials # credentials file
